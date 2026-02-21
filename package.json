@@ -1,0 +1,25 @@
+{
+    "name": "memory-leak-example",
+    "version": "1.0.0",
+    "description": "Memory leak example for Node.js server",
+    "main": "index.js",
+    "scripts": {
+        "start": "node --inspect index.js",
+        "test": "for i in $(seq 1 20); do curl -s http://localhost:${PORT:-3000}/; sleep 0.2; done"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/victor-homyakov/node-memory-leak-example.git"
+    },
+    "keywords": [
+        "Node",
+        "memory",
+        "leak"
+    ],
+    "author": "",
+    "license": "ISC",
+    "bugs": {
+        "url": "https://github.com/victor-homyakov/node-memory-leak-example/issues"
+    },
+    "homepage": "https://github.com/victor-homyakov/node-memory-leak-example#readme"
+}
