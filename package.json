@@ -5,7 +5,9 @@
     "main": "index.js",
     "scripts": {
         "start": "node --inspect index.js",
-        "test": "for i in $(seq 1 20); do curl -s http://localhost:${PORT:-3000}/; sleep 0.2; done"
+        "test": "for i in $(seq 1 20); do curl -s http://localhost:${PORT:-3000}/; sleep 0.5; done",
+        "test-long": "for i in $(seq 1 120); do curl -s http://localhost:${PORT:-3000}/; sleep 0.5; done",
+        "check-perf": "open http://localhost:${PORT:-3000}/perf"
     },
     "repository": {
         "type": "git",
