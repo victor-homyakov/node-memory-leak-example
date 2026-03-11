@@ -9,7 +9,7 @@ function processRequest(q, locale, res) {
     let response;
 
     if (cache.has(cacheKey)) {
-        response = cache.get(cacheKey);
+        response = cache.get(cacheKey).response;
     } else {
         const date = new Date(q);
         response = date.toLocaleString(locale, {
