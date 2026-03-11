@@ -46,7 +46,7 @@ function processPerfRequest(url, req, res) {
 const requestListener = (req, res) => {
     const url = new URL(req.url || "/", `http://${req.headers.host}`);
     const { pathname } = url;
-    console.log(req.method, pathname);
+    console.log(req.method, pathname, url.searchParams.toString());
 
     if (pathname === "/") {
         const q = Number(url.searchParams.get("q")) || Date.now();
