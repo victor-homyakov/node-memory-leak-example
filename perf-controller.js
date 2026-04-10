@@ -97,28 +97,36 @@ async function makeDumps(req, res) {
 
     const message =
         numberOfDumps > 1
-            ? `Снимаю дампы (${numberOfDumps} шт.) с интервалом ${interval} с. Хост на какое-то время перестанет отвечать на запросы.`
+            ? `Снимаю дампы (${numberOfDumps} шт.) с интервалом ${interval} с на машине ${os.hostname()}. Во время снятия каждого дампа хост на какое-то время перестанет отвечать на запросы.`
             : `Снимаю дамп на машине ${os.hostname()}. Хост на какое-то время перестанет отвечать на запросы.`;
     res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
     // res.end(message);
     res.end(pageWithMessageAndRedirect(message));
 
-    dumpInProgress = true;
-    await takeHeapSnapshots(numberOfDumps, interval);
-    dumpInProgress = false;
+    try {
+        dumpInProgress = true;
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+        await takeHeapSnapshots(numberOfDumps, interval);
+    } catch (err) {
+        console.error(err);
+    } finally {
+        dumpInProgress = false;
+    }
 }
 
 async function takeHeapSnapshots(numberOfDumps, interval) {
     let fd = null;
     let i = 0;
 
+    // Важно: сессия должна быть одна для всех снимаемых дампов, чтобы их можно было сравнивать между собой
+    // В разных сессиях у одного объекта могут быть разные адреса, например `@44500` и `@52400`
     const session = new Session();
     session.connect();
     session.on("HeapProfiler.addHeapSnapshotChunk", (m) => {
-        if (fd) {
+        if (fd !== null) {
             fs.writeSync(fd, m.params.chunk);
         } else {
-            log(`Файл дампа не открыт`);
+            log("Файл дампа не открыт");
         }
     });
 
@@ -127,25 +135,31 @@ async function takeHeapSnapshots(numberOfDumps, interval) {
             await new Promise((resolve) => setTimeout(resolve, interval * 1000));
         }
 
-        if (fd) {
-            log(`Файл дампа ещё не закрыт, ожидаю закрытия...`);
+        if (fd !== null) {
+            log("Файл дампа ещё не закрыт, ожидаю закрытия...");
             continue;
         }
 
         const dumpFileName = `profile.${Date.now()}.${i}.heapsnapshot`;
         const dumpFilePath = path.join(os.tmpdir(), dumpFileName);
-        fd = fs.openSync(dumpFilePath, "w");
+        let err;
 
-        log(`HeapProfiler.takeHeapSnapshot ${dumpFilePath}`);
-        const err = await new Promise((resolve) => {
-            session.post("HeapProfiler.takeHeapSnapshot", undefined, (err) => {
-                resolve(err);
+        try {
+            fd = fs.openSync(dumpFilePath, "w");
+
+            log(`HeapProfiler.takeHeapSnapshot ${os.hostname()} ${dumpFilePath}`);
+            err = await new Promise((resolve) => {
+                session.post("HeapProfiler.takeHeapSnapshot", undefined, (err) => {
+                    resolve(err);
+                });
             });
-        });
 
-        fs.closeSync(fd);
-        fd = null;
-        i++;
+            fs.closeSync(fd);
+            fd = null;
+            i++;
+        } catch (e) {
+            err = e;
+        }
 
         if (err) {
             const message = `Ошибка сохранения дампа ${dumpFilePath}`;
@@ -153,7 +167,7 @@ async function takeHeapSnapshots(numberOfDumps, interval) {
             console.error(message);
             console.error(err);
         } else {
-            log(`Дамп сохранён в ${dumpFilePath}`);
+            log(`Дамп на машине ${os.hostname()} сохранён в ${dumpFilePath}`);
         }
     }
 
